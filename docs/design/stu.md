@@ -226,7 +226,7 @@ The migration creates no history rows for existing students. Registration record
 | UC-STU 4a | frontend component | Cancel returns to details, sends no request, and shows no success message |
 | UC-STU 1a | integration | Unrelated instructor, another course's admin, and the student receive `403`; controller is not invoked and no target data or state leaks |
 | UC-STU 3a | unit and integration | Already inactive target returns `409`, remains inactive, and gains no duplicate event |
-| UC-STU 6a | integration | Two authorized deactivation requests produce one transition/event; the stale request receives `409` |
+| UC-STU 6a | integration | Two authorized requests run sequentially: the first produces one transition/event, and the stale second request receives `409` without adding another event |
 | UC-STU unresolvable target | integration | Unknown ID fails closed as `403`, discloses no target existence, and creates no history |
 | Generic profile update | unit and integration | A submitted `enabled` value cannot change account state |
 | FR-SEC-active-account, existing token | integration | A token issued before deactivation receives `401` on its next protected request and controller logic does not execute |
