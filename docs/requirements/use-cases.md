@@ -1478,7 +1478,7 @@ Details:
 **Business Rules:** BR-student-lifecycle
 
 **Associated Information:**
-- Consequences presented in the warning: the effects governed by BR-student-lifecycle, BR-deactivated-student-evaluations, and BR-submission-owed. The account may be reactivated in the future through UC-STU-reactivate-student: Reactivate a student; physical, unrecoverable deletion is a distinct action governed by UC-STU-delete-student: Delete a student. The course admin or instructor shall be able to cancel the use case at any time prior to submitting it.
+- Consequences presented in the warning: the effects governed by BR-student-lifecycle, BR-deactivated-student-evaluations, and BR-submission-owed. Access revocation includes otherwise-valid existing credentials per FR-SEC-active-account. The account may be reactivated in the future through UC-STU-reactivate-student: Reactivate a student; physical, unrecoverable deletion is a distinct action governed by UC-STU-delete-student: Delete a student. The course admin or instructor shall be able to cancel the use case at any time prior to submitting it.
 
 **Related Use Cases:** UC-STU-delete-student: Delete a student; UC-STU-reactivate-student: Reactivate a student
 **Assumptions:**
