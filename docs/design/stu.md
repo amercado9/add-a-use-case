@@ -53,6 +53,10 @@ classDiagram
         <<reused, user>>
         +isAccountEnabled(username) boolean
     }
+    class BearerAuthenticationEntryPoint {
+        <<reused, security>>
+        +commence(request, response, exception)
+    }
     class EvaluationService {
         <<reused, changed>>
         +addPeerEvaluation(evaluation)
@@ -68,6 +72,7 @@ classDiagram
     StudentController --> StudentService
     StudentLifecycleAuthorizationManager --> StudentSecurityService
     ActiveAccountFilter --> UserService
+    ActiveAccountFilter --> BearerAuthenticationEntryPoint
     StudentService --> StudentAccountStatusChangeRepository
     StudentAccountStatusChangeRepository --> StudentAccountStatusChange
     EvaluationService --> StudentService
@@ -75,7 +80,7 @@ classDiagram
 
 - **Frontend changed:** [`Students.vue`](../../frontend/src/pages/students/Students.vue) owns the dedicated action and confirmation; [`EditStudentForm.vue`](../../frontend/src/pages/students/EditStudentForm.vue) displays status without mutating it; [`apis/student`](../../frontend/src/apis/student/index.ts) adds the call.
 - **Student slice changed/new:** [`StudentController`](../../backend/src/main/java/team/projectpulse/student/StudentController.java) and [`StudentService`](../../backend/src/main/java/team/projectpulse/student/StudentService.java) own the transition. `StudentAccountStatusChange` and its repository live beside them in `student/`.
-- **Security changed/new:** [`SecurityConfiguration`](../../backend/src/main/java/team/projectpulse/security/SecurityConfiguration.java) adds the dedicated route rule. `StudentLifecycleAuthorizationManager` delegates the target-specific decision to [`StudentSecurityService`](../../backend/src/main/java/team/projectpulse/student/StudentSecurityService.java), admitting the student's course admin or an instructor assigned to her course section. `ActiveAccountFilter` runs after bearer authentication and before authorization for protected API requests and delegates the all-account current-state lookup to [`UserService`](../../backend/src/main/java/team/projectpulse/user/UserService.java).
+- **Security changed/new:** [`SecurityConfiguration`](../../backend/src/main/java/team/projectpulse/security/SecurityConfiguration.java) adds the dedicated route rule. `StudentLifecycleAuthorizationManager` delegates the target-specific decision to [`StudentSecurityService`](../../backend/src/main/java/team/projectpulse/student/StudentSecurityService.java), admitting the student's course admin or an instructor assigned to her course section. `ActiveAccountFilter` runs after bearer authentication and before authorization for protected API requests and delegates the all-account current-state lookup to [`UserService`](../../backend/src/main/java/team/projectpulse/user/UserService.java). On an inactive account it clears the security context and calls the existing bearer authentication entry point with a disabled-account authentication exception; it does not throw toward MVC advice from the filter chain.
 - **Evaluation changed:** [`EvaluationService`](../../backend/src/main/java/team/projectpulse/evaluation/EvaluationService.java) delegates historical-status questions to `StudentService`; it does not import the new repository.
 - **Notification reused:** [`SubmissionStatusService`](../../backend/src/main/java/team/projectpulse/notification/SubmissionStatusService.java) keeps using current `enabled` status for what is owed.
 
@@ -135,6 +140,7 @@ sequenceDiagram
     JWT-->>AF: Authenticated subject
     AF->>US: isAccountEnabled(subject)
     US-->>AF: false
+    AF->>AF: Clear SecurityContext; invoke bearer entry point
     AF-->>S: 401 Result
     Note over API: Controller is not invoked
 ```
@@ -207,7 +213,7 @@ The migration creates no history rows for existing students. Registration record
 - Authentication remains the self-issued JWT mechanism; `ActiveAccountFilter` adds the current-account check required by FR-SEC-active-account.
 - Authorization remains fail-closed in `SecurityConfiguration` and the `AuthorizationManager` family.
 - Time uses the injected `Clock` and [`WeekKeys`](../../backend/src/main/java/team/projectpulse/system/WeekKeys.java), including ISO week boundaries.
-- Errors keep the shared `Result` envelope. A small student-lifecycle conflict exception maps to `409`; ineligible or unknown evaluation status maps to the evaluation slice's existing `400` policy error.
+- Errors keep the shared `Result` envelope. The active-account filter invokes the existing bearer entry point directly because MVC advice cannot translate an exception raised after bearer authentication in the filter chain. A small student-lifecycle conflict exception maps to `409`; ineligible or unknown evaluation status maps to the evaluation slice's existing `400` policy error.
 - The architecture-of-record needs no Level-1 boundary change: `student` remains foundation, `evaluation` calls its service layer, and `security` remains the cross-cutting request gate.
 
 ## Tests
