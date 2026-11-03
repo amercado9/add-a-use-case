@@ -1516,7 +1516,7 @@ Details:
 **Business Rules:** BR-student-lifecycle
 
 **Associated Information:**
-- The course admin or instructor shall be able to cancel the use case at any time prior to submitting it.
+- Reactivation restores access without altering the course-section or team assignments retained under BR-student-lifecycle. The course admin or instructor shall be able to cancel the use case at any time prior to submitting it.
 
 **Related Use Cases:** UC-STU-delete-student: Delete a student; UC-STU-deactivate-student: Deactivate a student
 **Assumptions:**
