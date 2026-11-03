@@ -2191,7 +2191,7 @@ Report generating algorithm: N/A
 **Primary Actor:** student
 **Secondary Actors:**
 **Trigger:** The student indicates to submit a peer evaluation for the previous week.
-**Description:** The student wants to submit a peer evaluation for the previous week, so that she can provide feedback and assessment for every team member.
+**Description:** The student wants to submit peer evaluations for the previous week, so that she can provide feedback and assessment for the team members she owes an evaluation and may evaluate any other eligible teammate.
 
 **Preconditions:**
 - PRE-1. The student is logged into the system.
@@ -2202,9 +2202,9 @@ Report generating algorithm: N/A
 
 **Main Success Scenario:**
 1. The student indicates to submit a peer evaluation for the previous week.
-2. The system asks the student to provide peer evaluations for every team member.
+2. The system asks the student to provide peer evaluations for every team member she owes an evaluation and permits her to add an evaluation for any other eligible teammate (BR-submission-owed, BR-deactivated-student-evaluations).
 3. See the "Details" defined in the Associated Information of this use case.
-4. The student evaluates each team member (self included) and confirms that she has finished.
+4. The student evaluates each required team member (self included), optionally evaluates any other eligible teammate, and confirms that she has finished.
 5. The system validates the student's inputs according to the "Details" defined in the Associated Information of this use case.
 6. The system displays the details of the peer evaluation and asks the student to confirm the evaluation and submission.
 7. The system notes that a submitted peer evaluation remains editable while its submission window is open; the student may re-submit it to update it until the window closes (BR-evaluation-editable-until-close, BR-evaluation-submission-window).
@@ -2225,15 +2225,18 @@ Report generating algorithm: N/A
 - **4a. Input validation rule violation:**
   - 4a1. The system alerts the student that an input validation rule is violated and displays the nature and location of the error.
   - 4a2. The student corrects the mistake and returns to step 4 of the normal flow.
+- **5a. The submitted evaluatee was not eligible for the evaluated week:**
+  - 5a1. The system rejects that evaluation and informs the student that the teammate may not be evaluated for that week (BR-deactivated-student-evaluations).
+  - 5a2. The student returns to step 4 of the normal flow.
 
 **Priority:** High
 **Frequency of Use:** Approximately 35-40 users, 1 usage per week.
-**Business Rules:** BR-team-scoped-access (the student evaluates the members of a team she belongs to, and no other team), BR-team-assignment-required (only a student assigned to a team submits one), BR-active-weeks, BR-evaluation-editable-until-close, BR-evaluation-submission-window, BR-evaluation-private-comment
+**Business Rules:** BR-team-scoped-access (the student evaluates the members of a team she belongs to, and no other team), BR-team-assignment-required (only a student assigned to a team submits one), BR-active-weeks, BR-evaluation-editable-until-close, BR-evaluation-submission-window, BR-evaluation-private-comment, BR-submission-owed, BR-deactivated-student-evaluations
 
 **Associated Information:**
 
 Details:
-- Every team member MUST be evaluated.
+- Every team member whose evaluation is owed MUST be evaluated. An evaluation that is permitted but not owed is optional (BR-submission-owed, BR-deactivated-student-evaluations).
 - Scores MUST be integers.
 
 Example (each team member, self included, is evaluated on every rubric criterion):
