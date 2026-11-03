@@ -1458,7 +1458,7 @@ Details:
 
 **Preconditions:**
 - PRE-1. The course admin or instructor is logged into the system.
-- PRE-2. There exists at least one active student in the system.
+- PRE-2. The selected student's account is active.
 
 **Postconditions:**
 - POST-1. The student's account is deactivated.
@@ -1473,6 +1473,14 @@ Details:
 7. Use case ends.
 
 **Extensions:**
+- **3a. The selected student's account is already deactivated:**
+  - 3a1. The system informs the course admin or instructor that the student is already deactivated.
+  - 3a2. The system makes no changes.
+  - 3a3. Use case ends.
+- **6a. The student's account was deactivated after the warning was displayed:**
+  - 6a1. The system informs the course admin or instructor that the student is already deactivated.
+  - 6a2. The system makes no further changes.
+  - 6a3. Use case ends.
 **Priority:** Low
 **Frequency of Use:** Rare. Occurs occasionally when a student withdraws from a course section.
 **Business Rules:** BR-student-lifecycle
