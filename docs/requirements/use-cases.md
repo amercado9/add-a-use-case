@@ -1437,7 +1437,7 @@ Details:
 **Extensions:**
 **Priority:** Low
 **Frequency of Use:** Rare. 1 user, 1 usage per year.
-**Business Rules:** BR-student-lifecycle, BR-deactivated-student-evaluations, BR-submission-owed
+**Business Rules:** BR-student-lifecycle
 
 **Associated Information:**
 - Data integrity and deletion rules: If a student already submits WARs and peer evaluations,  deleting a student will automatically delete the associated WARs and peer evaluations. Deletion strategy: student deletion is a physical delete. In other words, this will permanently remove the student and the associated WARs and peer evaluations from the database (cannot be recovered). The course admin shall be able to cancel the use case at any time prior to submitting it.
@@ -1491,7 +1491,7 @@ Details:
   - 6a3. Use case ends.
 **Priority:** Low
 **Frequency of Use:** Rare. Occurs occasionally when a student withdraws from a course section.
-**Business Rules:** BR-student-lifecycle
+**Business Rules:** BR-student-lifecycle, BR-deactivated-student-evaluations, BR-submission-owed
 
 **Associated Information:**
 - Consequences presented in the warning: the effects governed by BR-student-lifecycle, BR-deactivated-student-evaluations, and BR-submission-owed. Access revocation includes otherwise-valid existing credentials per FR-SEC-active-account. The account may be reactivated in the future through UC-STU-reactivate-student: Reactivate a student; physical, unrecoverable deletion is a distinct action governed by UC-STU-delete-student: Delete a student.
