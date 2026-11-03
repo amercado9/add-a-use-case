@@ -2,7 +2,7 @@
 
 > Realizes: UC-STU-deactivate-student
 > Depends on: FR-SEC-authentication, FR-SEC-authorization, FR-SEC-deny-unauthorized, FR-SEC-active-account, BR-student-lifecycle, BR-deactivated-student-evaluations, BR-submission-owed, BR-evaluation-submission-window
-> See: [student use cases](../requirements/use-cases.md#student), [security requirements](../requirements/software-requirements-specification.md#security-and-authorization-requirements), [Business Domain Model](../requirements/software-requirements-specification.md#business-domain-model), [architectural-design.md](architectural-design.md#container-diagram)
+> See: [student use cases](../requirements/use-cases.md#student), [security requirements](../requirements/software-requirements-specification.md#security-and-authorization-requirements), [Business Domain Model](../requirements/software-requirements-specification.md#business-domain-model), [architectural-design.md](architectural-design.md#containers)
 > Designed against `main` at `59f0267` (2026-11-03).
 
 ## Overview
