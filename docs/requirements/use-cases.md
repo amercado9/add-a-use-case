@@ -1473,6 +1473,10 @@ Details:
 7. Use case ends.
 
 **Extensions:**
+- **1a. The instructor is not authorized to deactivate the selected student:**
+  - 1a1. The system denies the attempt per BR-student-lifecycle and informs the instructor that she is not authorized to deactivate this student.
+  - 1a2. The system discloses no additional student information and leaves the student's account unchanged.
+  - 1a3. Use case ends.
 - **3a. The selected student's account is already deactivated:**
   - 3a1. The system informs the course admin or instructor that the student is already deactivated.
   - 3a2. The system makes no changes.
