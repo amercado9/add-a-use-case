@@ -2346,12 +2346,13 @@ Report generating algorithm: For each individual criterion score (e.g., Quality 
 
 **Priority:** High
 **Frequency of Use:** Approximately 2 users, average of 1 usage per week.
-**Business Rules:** BR-section-scoped-access (the instructor may generate the report only for a course section she is assigned to), BR-evaluation-private-comment, BR-submission-owed (who has not turned in the peer evaluation)
+**Business Rules:** BR-section-scoped-access (the instructor may generate the report only for a course section she is assigned to), BR-evaluation-private-comment, BR-submission-owed (who has not turned in the peer evaluation), BR-deactivated-student-evaluations (which students the historical report includes)
 
 **Associated Information:**
 
 Report generating parameters:
 - Active week: Each peer evaluation report is associated with a week. The instructor shall first indicate for which active week she wants to generate a peer evaluation. E.g., "02-12-2024 to 02-18-2024"; by default, it shall be the previous week.
+- Student population: The report includes students according to BR-deactivated-student-evaluations; current account status alone does not rewrite a historical week's population or hide a retained evaluation.
 - Columns to include: student name, grade, comments. See the example below.
 - Sorting criteria: by default, sort by last name in ascending order.
 - Pagination: Not needed.
