@@ -1481,6 +1481,10 @@ Details:
   - 3a1. The system informs the course admin or instructor that the student is already deactivated.
   - 3a2. The system makes no changes.
   - 3a3. Use case ends.
+- **4a. The course admin or instructor declines the confirmation:**
+  - 4a1. The system cancels the deactivation and leaves the student's account active.
+  - 4a2. The system returns to the student's details.
+  - 4a3. Use case ends.
 - **6a. The student's account was deactivated after the warning was displayed:**
   - 6a1. The system informs the course admin or instructor that the student is already deactivated.
   - 6a2. The system makes no further changes.
@@ -1490,7 +1494,7 @@ Details:
 **Business Rules:** BR-student-lifecycle
 
 **Associated Information:**
-- Consequences presented in the warning: the effects governed by BR-student-lifecycle, BR-deactivated-student-evaluations, and BR-submission-owed. Access revocation includes otherwise-valid existing credentials per FR-SEC-active-account. The account may be reactivated in the future through UC-STU-reactivate-student: Reactivate a student; physical, unrecoverable deletion is a distinct action governed by UC-STU-delete-student: Delete a student. The course admin or instructor shall be able to cancel the use case at any time prior to submitting it.
+- Consequences presented in the warning: the effects governed by BR-student-lifecycle, BR-deactivated-student-evaluations, and BR-submission-owed. Access revocation includes otherwise-valid existing credentials per FR-SEC-active-account. The account may be reactivated in the future through UC-STU-reactivate-student: Reactivate a student; physical, unrecoverable deletion is a distinct action governed by UC-STU-delete-student: Delete a student.
 
 **Related Use Cases:** UC-STU-delete-student: Delete a student; UC-STU-reactivate-student: Reactivate a student
 **Assumptions:**
