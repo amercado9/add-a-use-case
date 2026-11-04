@@ -211,7 +211,10 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, this.baseUrl + "/students/search").hasAuthority("ROLE_instructor")
                         .requestMatchers(HttpMethod.POST, this.baseUrl + "/students").permitAll()
                         .requestMatchers(HttpMethod.PATCH, this.baseUrl + "/students/{studentId}/deactivation").access(this.studentLifecycleAuthorizationManager)
-                        .requestMatchers(HttpMethod.GET, this.baseUrl + "/students/{studentId}").access(this.userOwnershipAuthorizationManager)
+                        .requestMatchers(HttpMethod.GET, this.baseUrl + "/students/{studentId}").access(
+                                AuthorizationManagers.anyOf(
+                                        this.userOwnershipAuthorizationManager,
+                                        this.studentLifecycleAuthorizationManager))
                         .requestMatchers(HttpMethod.PUT, this.baseUrl + "/students/{studentId}").access(this.userOwnershipAuthorizationManager)
                         .requestMatchers(HttpMethod.DELETE, this.baseUrl + "/students/{studentId}").access(this.userOwnershipAuthorizationManager)
                         .requestMatchers(HttpMethod.GET, this.baseUrl + "/students/teams/{teamId}").access(this.teamMembershipAuthorizationManager)

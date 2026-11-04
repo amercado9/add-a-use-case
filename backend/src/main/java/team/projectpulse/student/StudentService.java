@@ -20,6 +20,7 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @Transactional
@@ -79,7 +80,15 @@ public class StudentService {
     }
 
     public Student findStudentById(Integer studentId) {
-        return this.studentRepository.findById(studentId)
+        Integer callerId = this.userUtils.getUserId();
+        if (studentId.equals(callerId) && this.userUtils.hasRole("ROLE_student")) {
+            return this.studentRepository.findById(studentId)
+                    .orElseThrow(() -> new ObjectNotFoundException("student", studentId));
+        }
+        Optional<Student> student = this.userUtils.hasRole("ROLE_admin")
+                ? this.studentRepository.findFirstByIdAndSectionCourseCourseAdminId(studentId, callerId)
+                : this.studentRepository.findFirstByIdAndSectionInstructorsId(studentId, callerId);
+        return student
                 .orElseThrow(() -> new ObjectNotFoundException("student", studentId));
     }
 

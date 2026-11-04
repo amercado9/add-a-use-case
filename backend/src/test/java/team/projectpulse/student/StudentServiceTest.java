@@ -8,6 +8,7 @@ import team.projectpulse.system.UserUtils;
 import team.projectpulse.user.MyUserPrincipal;
 import team.projectpulse.user.userinvitation.UserInvitationService;
 import team.projectpulse.system.exception.StudentAlreadyDeactivatedException;
+import team.projectpulse.system.exception.ObjectNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -102,6 +103,8 @@ class StudentServiceTest {
     void testFindStudentById() {
         // Given
         Student john = this.students.get(0);
+        given(this.userUtils.getUserId()).willReturn(1);
+        given(this.userUtils.hasRole("ROLE_student")).willReturn(true);
         given(this.studentRepository.findById(1)).willReturn(Optional.of(john));
 
         // When
@@ -110,6 +113,29 @@ class StudentServiceTest {
         // Then
         assertThat(result.getFirstName()).isEqualTo("John");
         assertThat(result.getLastName()).isEqualTo("Smith");
+    }
+
+    @Test
+    void owningCourseAdminFindsStudentWithoutSectionAssignment() {
+        Student john = this.students.get(0);
+        given(this.userUtils.getUserId()).willReturn(20);
+        given(this.userUtils.hasRole("ROLE_admin")).willReturn(true);
+        given(this.studentRepository.findFirstByIdAndSectionCourseCourseAdminId(1, 20))
+                .willReturn(Optional.of(john));
+
+        assertThat(this.studentService.findStudentById(1)).isSameAs(john);
+    }
+
+    @Test
+    void unrelatedInstructorCannotFindStudentThroughUnscopedId() {
+        given(this.userUtils.getUserId()).willReturn(21);
+        given(this.userUtils.hasRole("ROLE_admin")).willReturn(false);
+        given(this.studentRepository.findFirstByIdAndSectionInstructorsId(1, 21))
+                .willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> this.studentService.findStudentById(1))
+                .isInstanceOf(ObjectNotFoundException.class);
+        verify(this.studentRepository, never()).findById(1);
     }
 
     @Test

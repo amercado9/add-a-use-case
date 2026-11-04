@@ -27,4 +27,8 @@ public interface StudentRepository extends JpaRepository<Student, Integer>, JpaS
     boolean existsByIdAndSectionCourseCourseAdminId(Integer studentId, Integer courseAdminId);
 
     boolean existsByIdAndSectionInstructorsId(Integer studentId, Integer instructorId);
+
+    Optional<Student> findFirstByIdAndSectionCourseCourseAdminId(Integer studentId, Integer courseAdminId);
+
+    Optional<Student> findFirstByIdAndSectionInstructorsId(Integer studentId, Integer instructorId);
 }
