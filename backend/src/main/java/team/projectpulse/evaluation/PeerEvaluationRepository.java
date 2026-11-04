@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface PeerEvaluationRepository extends JpaRepository<PeerEvaluation, Integer> {
@@ -27,5 +28,16 @@ public interface PeerEvaluationRepository extends JpaRepository<PeerEvaluation, 
               and e.evaluator.section.sectionId = :sectionId
             """)
     List<Object[]> findEvaluatorAndEvaluateeIds(@Param("sectionId") Integer sectionId, @Param("week") String week);
+
+    @Query("""
+            select distinct e.evaluatee.id
+            from PeerEvaluation e
+            where e.week = :week
+              and e.evaluatee.section.sectionId = :sectionId
+            """)
+    Set<Integer> findDistinctEvaluateeIdsBySectionAndWeek(
+            @Param("sectionId") Integer sectionId,
+            @Param("week") String week
+    );
 
 }

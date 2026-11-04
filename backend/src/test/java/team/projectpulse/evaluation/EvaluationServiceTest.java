@@ -8,6 +8,8 @@ import team.projectpulse.section.Section;
 import team.projectpulse.section.SectionRepository;
 import team.projectpulse.student.Student;
 import team.projectpulse.student.StudentRepository;
+import team.projectpulse.student.StudentService;
+import team.projectpulse.student.EvaluationEligibility;
 import team.projectpulse.system.exception.PeerEvaluationIllegalArgumentException;
 import team.projectpulse.team.Team;
 import team.projectpulse.user.MyUserPrincipal;
@@ -24,6 +26,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import java.time.*;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -32,6 +35,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 class EvaluationServiceTest {
@@ -44,6 +48,8 @@ class EvaluationServiceTest {
     SectionRepository sectionRepository;
     @Mock
     Clock clock; // Mock the clock bean
+    @Mock
+    StudentService studentService;
 
     @InjectMocks
     EvaluationService evaluationService;
@@ -65,6 +71,10 @@ class EvaluationServiceTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(this.studentService.isEvaluationEligible(anyInt(), anyString()))
+                .thenReturn(EvaluationEligibility.ELIGIBLE);
+        lenient().when(this.evaluationRepository.findDistinctEvaluateeIdsBySectionAndWeek(anyInt(), anyString()))
+                .thenReturn(Set.of());
         // Create several peer evaluation criteria
         Criterion criterion1 = new Criterion("Quality of work", "How do you rate the quality of this teammate's work? (1-10)", 10.00);
         criterion1.setCriterionId(1);

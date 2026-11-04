@@ -7,6 +7,8 @@ import team.projectpulse.system.exception.PeerEvaluationIllegalArgumentException
 import team.projectpulse.system.exception.ObjectNotFoundException;
 import team.projectpulse.student.Student;
 import team.projectpulse.student.StudentRepository;
+import team.projectpulse.student.StudentService;
+import team.projectpulse.student.EvaluationEligibility;
 import team.projectpulse.team.Team;
 import jakarta.transaction.Transactional;
 import org.springframework.security.core.Authentication;
@@ -39,13 +41,15 @@ public class EvaluationService {
     private final StudentRepository studentRepository;
     private final SectionRepository sectionRepository;
     private final Clock clock; // Clock bean is defined in PeerEvaluationToolApplication.java, this object is for unit testing purposes.
+    private final StudentService studentService;
 
 
-    public EvaluationService(PeerEvaluationRepository evaluationRepository, StudentRepository studentRepository, SectionRepository sectionRepository, Clock clock) {
+    public EvaluationService(PeerEvaluationRepository evaluationRepository, StudentRepository studentRepository, SectionRepository sectionRepository, Clock clock, StudentService studentService) {
         this.evaluationRepository = evaluationRepository;
         this.studentRepository = studentRepository;
         this.sectionRepository = sectionRepository;
         this.clock = clock;
+        this.studentService = studentService;
     }
 
     public PeerEvaluation addPeerEvaluation(PeerEvaluation newPeerEvaluation) {
@@ -67,6 +71,8 @@ public class EvaluationService {
             throw new PeerEvaluationIllegalArgumentException("The evaluator and evaluatee must be on the same team.");
         }
 
+        requireEvaluationEligible(newPeerEvaluation.getEvaluatee(), newPeerEvaluation.getWeek());
+
         // Make sure this is not a duplicate evaluation
         if (this.evaluationRepository.findByWeekAndEvaluatorIdAndEvaluateeId(newPeerEvaluation.getWeek(), newPeerEvaluation.getEvaluator().getId(), newPeerEvaluation.getEvaluatee().getId()).isPresent()) {
             throw new PeerEvaluationIllegalArgumentException("You have already submitted an evaluation for " + newPeerEvaluation.getEvaluatee().getFirstName() + " in this week.");
@@ -81,6 +87,7 @@ public class EvaluationService {
                     // The week is read off the stored evaluation rather than off the update, because the caller
                     // writes the payload and could otherwise name an open week to reopen a closed evaluation.
                     requireOpenSubmissionWindow(oldEvaluation.getEvaluator().getSection(), oldEvaluation.getWeek(), WINDOW_CLOSED_MESSAGE);
+                    requireEvaluationEligible(oldEvaluation.getEvaluatee(), oldEvaluation.getWeek());
                     rescore(oldEvaluation, update.getRatings());
                     oldEvaluation.setPublicComment(update.getPublicComment());
                     oldEvaluation.setPrivateComment(update.getPrivateComment());
@@ -221,7 +228,13 @@ public class EvaluationService {
         report.setSectionName(this.sectionRepository.findById(sectionId).orElseThrow(() -> new ObjectNotFoundException("section", sectionId)).getSectionName());
 
         // Get all students in the section
-        List<Student> students = this.studentRepository.findBySectionSectionId(sectionId).stream().filter(student -> student.getTeam() != null).collect(Collectors.toList());
+        Set<Integer> retainedEvaluateeIds = this.evaluationRepository
+                .findDistinctEvaluateeIdsBySectionAndWeek(sectionId, week);
+        List<Student> students = this.studentRepository.findBySectionSectionId(sectionId).stream()
+                .filter(student -> student.getTeam() != null)
+                .filter(student -> retainedEvaluateeIds.contains(student.getId())
+                        || this.studentService.isEvaluationEligible(student.getId(), week) == EvaluationEligibility.ELIGIBLE)
+                .collect(Collectors.toList());
 
         // For each student, compute her average total score, collect all public comments and private comments, and compute rating averages for each criterion.
         students.forEach(student -> {
@@ -235,6 +248,16 @@ public class EvaluationService {
 
         report.setWeek(week);
         return report;
+    }
+
+    private void requireEvaluationEligible(Student evaluatee, String week) {
+        EvaluationEligibility eligibility = this.studentService.isEvaluationEligible(evaluatee.getId(), week);
+        if (eligibility != EvaluationEligibility.ELIGIBLE) {
+            throw new PeerEvaluationIllegalArgumentException(
+                    eligibility == EvaluationEligibility.INELIGIBLE
+                            ? "This student was inactive at the end of the evaluated week."
+                            : "This student's account status for the evaluated week is unknown.");
+        }
     }
 
     public PeerEvaluationAverage generateWeeklyPeerEvaluationSummaryForStudent(Integer studentId, String week) {
