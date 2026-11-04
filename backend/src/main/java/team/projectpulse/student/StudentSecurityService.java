@@ -47,4 +47,16 @@ public class StudentSecurityService {
                 .anyMatch(instructor -> instructor.getId().equals(instructorIdFromJwt));
     }
 
+    public boolean canManageLifecycle(Integer studentId) {
+        Integer callerId = this.userUtils.getUserId();
+        if (callerId == null) {
+            return false;
+        }
+        if (this.userUtils.hasRole("ROLE_admin")) {
+            return this.studentRepository.existsByIdAndSectionCourseCourseAdminId(studentId, callerId);
+        }
+        return this.userUtils.hasRole("ROLE_instructor")
+                && this.studentRepository.existsByIdAndSectionInstructorsId(studentId, callerId);
+    }
+
 }

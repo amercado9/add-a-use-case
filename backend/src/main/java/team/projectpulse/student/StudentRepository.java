@@ -23,4 +23,8 @@ public interface StudentRepository extends JpaRepository<Student, Integer>, JpaS
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<Student> findByIdAndSectionInstructorsId(Integer studentId, Integer instructorId);
+
+    boolean existsByIdAndSectionCourseCourseAdminId(Integer studentId, Integer courseAdminId);
+
+    boolean existsByIdAndSectionInstructorsId(Integer studentId, Integer instructorId);
 }
