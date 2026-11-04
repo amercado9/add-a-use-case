@@ -638,6 +638,7 @@ class EvaluationServiceTest {
 
     @Test
     void historicalReportIncludesEligibleAndRetainedStudentsButOmitsInactiveWithoutEvidence() {
+        this.eric.getTeam().removeStudent(this.eric);
         given(this.sectionRepository.findById(2)).willReturn(Optional.of(
                 new Section("2023-2024", LocalDate.of(2023, 8, 14), LocalDate.of(2024, 4, 29),
                         true, DayOfWeek.MONDAY, LocalTime.of(23, 59), DayOfWeek.TUESDAY, LocalTime.of(23, 59))));

@@ -231,9 +231,9 @@ public class EvaluationService {
         Set<Integer> retainedEvaluateeIds = this.evaluationRepository
                 .findDistinctEvaluateeIdsBySectionAndWeek(sectionId, week);
         List<Student> students = this.studentRepository.findBySectionSectionId(sectionId).stream()
-                .filter(student -> student.getTeam() != null)
                 .filter(student -> retainedEvaluateeIds.contains(student.getId())
-                        || this.studentService.isEvaluationEligible(student.getId(), week) == EvaluationEligibility.ELIGIBLE)
+                        || (student.getTeam() != null
+                        && this.studentService.isEvaluationEligible(student.getId(), week) == EvaluationEligibility.ELIGIBLE))
                 .collect(Collectors.toList());
 
         // For each student, compute her average total score, collect all public comments and private comments, and compute rating averages for each criterion.
