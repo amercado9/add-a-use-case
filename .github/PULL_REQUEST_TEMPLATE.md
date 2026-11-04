@@ -49,10 +49,10 @@ Design pull request: <!-- build pull request only: link your merged design pull 
 - `StudentServiceTest.testEvaluationEligibilityUsesLastStatusStrictlyBeforeFollowingMonday` — design test row “BR-deactivated-student-evaluations, boundary.”
 - `StudentServiceTest.testEvaluationEligibilityIsIneligibleForDisabledBoundaryStatus` — `BR-deactivated-student-evaluations`.
 - `StudentServiceTest.testEvaluationEligibilityIsUnknownWithoutRecordedStatus` — design test row “Unknown legacy status.”
-- `StudentServiceTest.testInstructorUpdatesStudent` — design test row “Generic profile update”; rewritten to assert the exact retained status and no history event, replacing the weak not-equal oracle.
-- `StudentServiceTest.testCourseAdminDeactivatesStudentAndRecordsTransition` — UC-STU step 6 and design main-flow row; rewritten to assert the exact clock-derived event.
+- `StudentServiceTest.testInstructorUpdatesStudent` **(rewritten)** — design test row “Generic profile update”; asserts the exact retained status and no history event instead of a weak not-equal oracle.
+- `StudentServiceTest.testCourseAdminDeactivatesStudentAndRecordsTransition` **(rewritten)** — UC-STU step 6 and design main-flow row; asserts the exact clock-derived event.
 - `StudentServiceTest.testAssignedInstructorDeactivatesStudent` — `BR-student-lifecycle` and design assigned-instructor row.
-- `StudentServiceTest.testAlreadyInactiveStudentConflictsWithoutDuplicateEvent` — UC-STU extension 3a; rewritten to assert unchanged state and no student/history save.
+- `StudentServiceTest.testAlreadyInactiveStudentConflictsWithoutDuplicateEvent` **(rewritten)** — UC-STU extension 3a; asserts unchanged state and no student/history save.
 - `StudentAccountStatusChangeRepositoryTest.findStatusAtWeekBoundaryUsesLatestTimestampThenHighestIdAndExcludesBoundary` — design boundary row; retained but not run locally because Docker was unavailable.
 - `StudentSecurityServiceTest.courseAdminCanManageStudentInOwnedCourse` — `BR-student-lifecycle`.
 - `StudentSecurityServiceTest.assignedInstructorCanManageStudentInSection` — `BR-student-lifecycle`.
@@ -60,22 +60,15 @@ Design pull request: <!-- build pull request only: link your merged design pull 
 - `StudentSecurityServiceTest.studentCannotManageLifecycle` — UC-STU extension 1a and `BR-student-lifecycle`.
 - `StudentSecurityServiceTest.missingCallerFailsClosed` — `FR-SEC-authentication` and `FR-SEC-deny-unauthorized`.
 - `ActiveAccountFilterTest.activeBearerAccountContinues` — design row “FR-SEC-active-account, active token.”
-- `ActiveAccountFilterTest.deactivatedBearerAccountIsClearedAndRejected` — `FR-SEC-active-account`; rewritten to require a disabled-account authentication exception.
+- `ActiveAccountFilterTest.deactivatedBearerAccountIsClearedAndRejected` **(rewritten)** — `FR-SEC-active-account` and UC-STU Associated Information on existing credentials; requires a disabled-account authentication exception.
 - `EvaluationServiceTest.inactiveEvaluateeAtWeekEndIsRejected` — `BR-deactivated-student-evaluations`, deactivation-week design row.
 - `EvaluationServiceTest.unknownLegacyEvaluateeStatusIsRejected` — design row “Unknown legacy status.”
 - `EvaluationServiceTest.historicalReportIncludesEligibleAndRetainedStudentsButOmitsInactiveWithoutEvidence` — design row “Historical section report.”
-- `deactivate-student.spec.cy.js` warning/cancel test — UC-STU step 4 and extension 4a; rewritten to assert retained details and no success message; not run locally because frontend dependencies were unavailable.
+- `deactivate-student.spec.cy.js` warning/cancel test **(rewritten)** — UC-STU step 4, extension 4a, and its Associated Information; asserts retained details, no request, and no success message; not run locally because frontend dependencies were unavailable.
 - `deactivate-student.spec.cy.js` confirm test — UC-STU steps 5–6; not run locally because frontend dependencies were unavailable.
 - `deactivate-student.spec.cy.js` stale-409 test — UC-STU extension 6a; added to prove refresh feedback and remaining on details; not run locally because frontend dependencies were unavailable.
 
-**Rewritten tests:**
-- `StudentServiceTest.testInstructorUpdatesStudent` — rewritten to assert the exact retained enabled status and no history event; oracle: design row “Generic profile update.”
-- `StudentServiceTest.testCourseAdminDeactivatesStudentAndRecordsTransition` — rewritten to assert the exact injected-clock event; oracle: UC-STU step 6 and the main-flow design row.
-- `StudentServiceTest.testAlreadyInactiveStudentConflictsWithoutDuplicateEvent` — rewritten to assert unchanged inactive state and no student/history save; oracle: UC-STU extension 3a.
-- `ActiveAccountFilterTest.deactivatedBearerAccountIsClearedAndRejected` — rewritten to require a disabled-account authentication exception; oracle: `FR-SEC-active-account` and UC-STU Associated Information on existing credentials.
-- `deactivate-student.spec.cy.js` warning/cancel test — rewritten to assert details remain visible, no request is sent, and no success message appears; oracle: UC-STU step 4, extension 4a, and its Associated Information.
-
-No test was deleted. Permissive evaluation stubs were supplemented with behavior tests whose expected outcomes come from the design and business rules.
+Rewritten tests are marked above; no test was deleted. Permissive evaluation stubs were supplemented with specification-derived behavior tests.
 
 ## The code I broke
 <!-- Build pull request only. The test you trusted least, the one line of
