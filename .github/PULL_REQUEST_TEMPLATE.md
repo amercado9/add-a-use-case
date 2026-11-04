@@ -68,7 +68,14 @@ Design pull request: <!-- build pull request only: link your merged design pull 
 - `deactivate-student.spec.cy.js` confirm test — UC-STU steps 5–6; not run locally because frontend dependencies were unavailable.
 - `deactivate-student.spec.cy.js` stale-409 test — UC-STU extension 6a; added to prove refresh feedback and remaining on details; not run locally because frontend dependencies were unavailable.
 
-No test was deleted. Weak tests were rewritten as named above; permissive evaluation stubs were supplemented with behavior tests whose expected outcomes come from the design and business rules.
+**Rewritten tests:**
+- `StudentServiceTest.testInstructorUpdatesStudent` — rewritten to assert the exact retained enabled status and no history event; oracle: design row “Generic profile update.”
+- `StudentServiceTest.testCourseAdminDeactivatesStudentAndRecordsTransition` — rewritten to assert the exact injected-clock event; oracle: UC-STU step 6 and the main-flow design row.
+- `StudentServiceTest.testAlreadyInactiveStudentConflictsWithoutDuplicateEvent` — rewritten to assert unchanged inactive state and no student/history save; oracle: UC-STU extension 3a.
+- `ActiveAccountFilterTest.deactivatedBearerAccountIsClearedAndRejected` — rewritten to require a disabled-account authentication exception; oracle: `FR-SEC-active-account` and UC-STU Associated Information on existing credentials.
+- `deactivate-student.spec.cy.js` warning/cancel test — rewritten to assert details remain visible, no request is sent, and no success message appears; oracle: UC-STU step 4, extension 4a, and its Associated Information.
+
+No test was deleted. Permissive evaluation stubs were supplemented with behavior tests whose expected outcomes come from the design and business rules.
 
 ## The code I broke
 <!-- Build pull request only. The test you trusted least, the one line of
