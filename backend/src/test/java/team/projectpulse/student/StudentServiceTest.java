@@ -23,6 +23,10 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -45,6 +49,10 @@ class StudentServiceTest {
     PasswordEncoder passwordEncoder;
     @Mock
     UserUtils userUtils;
+    @Mock
+    StudentAccountStatusChangeRepository statusChangeRepository;
+    @Mock
+    Clock clock;
 
     @InjectMocks
     private StudentService studentService;
@@ -110,6 +118,8 @@ class StudentServiceTest {
         given(this.sectionRepository.findById(1)).willReturn(Optional.of(new Section()));
         given(this.passwordEncoder.encode(anyString())).willReturn("Encoded Password");
         given(this.studentRepository.save(jan)).willReturn(jan);
+        given(this.clock.instant()).willReturn(Instant.parse("2026-11-04T18:00:00Z"));
+        given(this.clock.getZone()).willReturn(ZoneId.of("America/Chicago"));
 
         // When
         Student result = this.studentService.saveStudent(jan, 1, 1, "token", "student");
@@ -121,6 +131,48 @@ class StudentServiceTest {
         assertThat(result.getRoles()).isEqualTo("student");
         assertThat(result.getSection()).isNotNull();
         assertThat(result.isEnabled()).isEqualTo(true);
+        verify(this.statusChangeRepository).save(argThat(change ->
+                change.getStudent() == jan
+                        && change.isEnabled()
+                        && change.getEffectiveAt().equals(LocalDateTime.of(2026, 11, 4, 12, 0))));
+    }
+
+    @Test
+    void testEvaluationEligibilityUsesLastStatusStrictlyBeforeFollowingMonday() {
+        StudentAccountStatusChange active = new StudentAccountStatusChange(this.students.get(0), true,
+                LocalDateTime.of(2026, 10, 4, 23, 59));
+        given(this.statusChangeRepository
+                .findFirstByStudentIdAndEffectiveAtBeforeOrderByEffectiveAtDescStatusChangeIdDesc(
+                        1, LocalDateTime.of(2026, 10, 5, 0, 0)))
+                .willReturn(Optional.of(active));
+
+        EvaluationEligibility result = this.studentService.isEvaluationEligible(1, "2026-W40");
+
+        assertThat(result).isEqualTo(EvaluationEligibility.ELIGIBLE);
+    }
+
+    @Test
+    void testEvaluationEligibilityIsIneligibleForDisabledBoundaryStatus() {
+        StudentAccountStatusChange inactive = new StudentAccountStatusChange(this.students.get(0), false,
+                LocalDateTime.of(2026, 10, 4, 12, 0));
+        given(this.statusChangeRepository
+                .findFirstByStudentIdAndEffectiveAtBeforeOrderByEffectiveAtDescStatusChangeIdDesc(anyInt(), any(LocalDateTime.class)))
+                .willReturn(Optional.of(inactive));
+
+        EvaluationEligibility result = this.studentService.isEvaluationEligible(1, "2026-W40");
+
+        assertThat(result).isEqualTo(EvaluationEligibility.INELIGIBLE);
+    }
+
+    @Test
+    void testEvaluationEligibilityIsUnknownWithoutRecordedStatus() {
+        given(this.statusChangeRepository
+                .findFirstByStudentIdAndEffectiveAtBeforeOrderByEffectiveAtDescStatusChangeIdDesc(anyInt(), any(LocalDateTime.class)))
+                .willReturn(Optional.empty());
+
+        EvaluationEligibility result = this.studentService.isEvaluationEligible(1, "2026-W40");
+
+        assertThat(result).isEqualTo(EvaluationEligibility.UNKNOWN);
     }
 
     @Test

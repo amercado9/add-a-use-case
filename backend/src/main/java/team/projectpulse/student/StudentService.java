@@ -3,6 +3,7 @@ package team.projectpulse.student;
 import team.projectpulse.section.Section;
 import team.projectpulse.section.SectionRepository;
 import team.projectpulse.system.UserUtils;
+import team.projectpulse.system.WeekKeys;
 import team.projectpulse.system.exception.ObjectNotFoundException;
 import team.projectpulse.user.userinvitation.UserInvitationService;
 import jakarta.transaction.Transactional;
@@ -15,6 +16,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -27,14 +30,18 @@ public class StudentService {
     private final UserInvitationService userInvitationService;
     private final PasswordEncoder passwordEncoder;
     private final UserUtils userUtils;
+    private final StudentAccountStatusChangeRepository statusChangeRepository;
+    private final Clock clock;
 
 
-    public StudentService(StudentRepository studentRepository, SectionRepository sectionRepository, UserInvitationService userInvitationService, PasswordEncoder passwordEncoder, UserUtils userUtils) {
+    public StudentService(StudentRepository studentRepository, SectionRepository sectionRepository, UserInvitationService userInvitationService, PasswordEncoder passwordEncoder, UserUtils userUtils, StudentAccountStatusChangeRepository statusChangeRepository, Clock clock) {
         this.studentRepository = studentRepository;
         this.sectionRepository = sectionRepository;
         this.userInvitationService = userInvitationService;
         this.passwordEncoder = passwordEncoder;
         this.userUtils = userUtils;
+        this.statusChangeRepository = statusChangeRepository;
+        this.clock = clock;
     }
 
     public Page<Student> findByCriteria(Map<String, String> searchCriteria, Pageable pageable) {
@@ -99,9 +106,23 @@ public class StudentService {
         newStudent.setPassword(this.passwordEncoder.encode(newStudent.getPassword()));
 
         Student savedStudent = this.studentRepository.save(newStudent);
+        this.statusChangeRepository.save(new StudentAccountStatusChange(savedStudent, true, LocalDateTime.now(this.clock)));
         // Delete the user invitation after the student is saved.
         this.userInvitationService.deleteUserInvitation(newStudent.getEmail());
         return savedStudent;
+    }
+
+    /**
+     * Resolves whether a student was eligible to be evaluated at the end of an ISO week.
+     * Status at the boundary is the last real transition strictly before the following Monday;
+     * legacy students with no such event remain unknown.
+     */
+    public EvaluationEligibility isEvaluationEligible(Integer studentId, String week) {
+        LocalDateTime followingMonday = WeekKeys.monday(week).plusWeeks(1).atStartOfDay();
+        return this.statusChangeRepository
+                .findFirstByStudentIdAndEffectiveAtBeforeOrderByEffectiveAtDescStatusChangeIdDesc(studentId, followingMonday)
+                .map(change -> change.isEnabled() ? EvaluationEligibility.ELIGIBLE : EvaluationEligibility.INELIGIBLE)
+                .orElse(EvaluationEligibility.UNKNOWN);
     }
 
     public Student updateStudent(Integer studentId, Student update) {
