@@ -74,6 +74,9 @@ Rewritten tests are marked above; no test was deleted. Permissive evaluation stu
 <!-- Build pull request only. The test you trusted least, the one line of
      production code you changed, and whether the test went red. If it stayed
      green, what you did about it. -->
+I trusted `ActiveAccountFilterTest.deactivatedBearerAccountIsClearedAndRejected` least because it is a unit test with mocked account lookup and entry point, so it does not prove the full filter chain returns `401`.
+I temporarily removed `SecurityContextHolder.clearContext()` from `ActiveAccountFilter`; the test went red because the deactivated JWT remained authenticated (`expected null`), so the test detects that broken behavior.
+I restored the line immediately and reran the same test green (1 test, 0 failures); no mutation remains. Full HTTP `401` behavior still needs the design-listed integration test.
 
 ## My review
 <!-- Build pull request only.
