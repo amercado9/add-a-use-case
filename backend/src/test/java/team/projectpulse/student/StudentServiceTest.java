@@ -7,6 +7,7 @@ import team.projectpulse.section.SectionRepository;
 import team.projectpulse.system.UserUtils;
 import team.projectpulse.user.MyUserPrincipal;
 import team.projectpulse.user.userinvitation.UserInvitationService;
+import team.projectpulse.system.exception.StudentAlreadyDeactivatedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,6 +33,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
@@ -226,7 +228,53 @@ class StudentServiceTest {
         assertThat(result.getLastName()).isEqualTo(update.getLastName());
         assertThat(result.getEmail()).isEqualTo(update.getEmail());
 //        assertThat(result.getRoles()).isEqualTo(update.getRoles());
-        assertThat(result.isEnabled()).isEqualTo(update.isEnabled());
+        assertThat(result.isEnabled()).isNotEqualTo(update.isEnabled());
+    }
+
+    @Test
+    void testCourseAdminDeactivatesStudentAndRecordsTransition() {
+        Student student = this.students.get(0);
+        student.setId(1);
+        given(this.userUtils.getUserId()).willReturn(20);
+        given(this.userUtils.hasRole("ROLE_admin")).willReturn(true);
+        given(this.studentRepository.findByIdAndSectionCourseCourseAdminId(1, 20)).willReturn(Optional.of(student));
+        given(this.studentRepository.save(student)).willReturn(student);
+        given(this.clock.instant()).willReturn(Instant.parse("2026-11-04T18:00:00Z"));
+        given(this.clock.getZone()).willReturn(ZoneId.of("America/Chicago"));
+
+        Student result = this.studentService.deactivateStudent(1);
+
+        assertThat(result.isEnabled()).isFalse();
+        verify(this.statusChangeRepository).save(argThat(change ->
+                change.getStudent() == student && !change.isEnabled()));
+    }
+
+    @Test
+    void testAssignedInstructorDeactivatesStudent() {
+        Student student = this.students.get(0);
+        student.setId(1);
+        given(this.userUtils.getUserId()).willReturn(21);
+        given(this.userUtils.hasRole("ROLE_admin")).willReturn(false);
+        given(this.studentRepository.findByIdAndSectionInstructorsId(1, 21)).willReturn(Optional.of(student));
+        given(this.studentRepository.save(student)).willReturn(student);
+        given(this.clock.instant()).willReturn(Instant.parse("2026-11-04T18:00:00Z"));
+        given(this.clock.getZone()).willReturn(ZoneId.of("America/Chicago"));
+
+        assertThat(this.studentService.deactivateStudent(1).isEnabled()).isFalse();
+    }
+
+    @Test
+    void testAlreadyInactiveStudentConflictsWithoutDuplicateEvent() {
+        Student student = this.students.get(0);
+        student.setId(1);
+        student.setEnabled(false);
+        given(this.userUtils.getUserId()).willReturn(20);
+        given(this.userUtils.hasRole("ROLE_admin")).willReturn(true);
+        given(this.studentRepository.findByIdAndSectionCourseCourseAdminId(1, 20)).willReturn(Optional.of(student));
+
+        assertThatThrownBy(() -> this.studentService.deactivateStudent(1))
+                .isInstanceOf(StudentAlreadyDeactivatedException.class);
+        verify(this.statusChangeRepository, never()).save(any());
     }
 
     @Test

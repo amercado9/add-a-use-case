@@ -5,13 +5,13 @@ import team.projectpulse.section.SectionRepository;
 import team.projectpulse.system.UserUtils;
 import team.projectpulse.system.WeekKeys;
 import team.projectpulse.system.exception.ObjectNotFoundException;
+import team.projectpulse.system.exception.StudentAlreadyDeactivatedException;
 import team.projectpulse.user.userinvitation.UserInvitationService;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -135,15 +135,25 @@ public class StudentService {
         oldStudent.setLastName(update.getLastName());
         oldStudent.setEmail(update.getEmail());
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return this.studentRepository.save(oldStudent);
+    }
 
-        // If the user is an admin, then the user can update all the fields
-        if (authentication.getAuthorities().stream().anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ROLE_instructor"))) {
-            oldStudent.setEnabled(update.isEnabled());
-//            oldStudent.setRoles(update.getRoles());
+    public Student deactivateStudent(Integer studentId) {
+        Integer callerId = this.userUtils.getUserId();
+        Student student = (this.userUtils.hasRole("ROLE_admin")
+                ? this.studentRepository.findByIdAndSectionCourseCourseAdminId(studentId, callerId)
+                : this.studentRepository.findByIdAndSectionInstructorsId(studentId, callerId))
+                .orElseThrow(() -> new AccessDeniedException("No permission."));
+
+        if (!student.isEnabled()) {
+            throw new StudentAlreadyDeactivatedException(studentId);
         }
 
-        return this.studentRepository.save(oldStudent);
+        student.setEnabled(false);
+        Student savedStudent = this.studentRepository.save(student);
+        this.statusChangeRepository.save(new StudentAccountStatusChange(
+                savedStudent, false, LocalDateTime.now(this.clock)));
+        return savedStudent;
     }
 
     public void deleteStudent(Integer studentId) {
