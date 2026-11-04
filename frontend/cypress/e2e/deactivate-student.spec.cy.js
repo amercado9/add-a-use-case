@@ -39,6 +39,8 @@ describe('Deactivate a student', () => {
       .and('contain', 'reactivated').and('contain', 'not permanent deletion')
     cy.contains('button', 'Cancel').click()
     cy.get('@deactivate.all').should('have.length', 0)
+    cy.get('.el-dialog').should('be.visible').and('contain', 'John')
+    cy.contains('Student deactivated successfully').should('not.exist')
   })
 
   it('sends the dedicated transition only after confirmation (step 5)', () => {
@@ -47,5 +49,16 @@ describe('Deactivate a student', () => {
     }).as('deactivate')
     cy.contains('button', 'Confirm deactivation').click()
     cy.wait('@deactivate').its('request.body').should('be.empty')
+  })
+
+  it('refreshes and stays on details when a stale confirmation receives 409 (6a)', () => {
+    cy.intercept('PATCH', '**/students/4/deactivation', {
+      statusCode: 409,
+      body: { flag: false, code: 409, message: 'Student 4 is already deactivated.' }
+    }).as('conflict')
+    cy.contains('button', 'Confirm deactivation').click()
+    cy.wait('@conflict')
+    cy.get('.el-dialog').should('be.visible')
+    cy.contains('This student is already deactivated.').should('be.visible')
   })
 })

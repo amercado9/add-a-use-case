@@ -326,6 +326,40 @@ class EvaluationServiceTest {
     }
 
     @Test
+    void inactiveEvaluateeAtWeekEndIsRejected() {
+        LocalDate fixedDate = LocalDate.of(2023, 8, 13);
+        Clock fixedClock = Clock.fixed(fixedDate.atStartOfDay(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault());
+        given(this.clock.instant()).willReturn(fixedClock.instant());
+        given(this.clock.getZone()).willReturn(fixedClock.getZone());
+        given(this.studentService.isEvaluationEligible(this.woody.getId(), "2023-W31"))
+                .willReturn(EvaluationEligibility.INELIGIBLE);
+        PeerEvaluation evaluation = new PeerEvaluation("2023-W31", this.amanda, this.woody,
+                List.of(), "public comment", "private comment");
+
+        assertThatThrownBy(() -> this.evaluationService.addPeerEvaluation(evaluation))
+                .isInstanceOf(PeerEvaluationIllegalArgumentException.class)
+                .hasMessage("This student was inactive at the end of the evaluated week.");
+        verify(this.evaluationRepository, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    void unknownLegacyEvaluateeStatusIsRejected() {
+        LocalDate fixedDate = LocalDate.of(2023, 8, 13);
+        Clock fixedClock = Clock.fixed(fixedDate.atStartOfDay(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault());
+        given(this.clock.instant()).willReturn(fixedClock.instant());
+        given(this.clock.getZone()).willReturn(fixedClock.getZone());
+        given(this.studentService.isEvaluationEligible(this.woody.getId(), "2023-W31"))
+                .willReturn(EvaluationEligibility.UNKNOWN);
+        PeerEvaluation evaluation = new PeerEvaluation("2023-W31", this.amanda, this.woody,
+                List.of(), "public comment", "private comment");
+
+        assertThatThrownBy(() -> this.evaluationService.addPeerEvaluation(evaluation))
+                .isInstanceOf(PeerEvaluationIllegalArgumentException.class)
+                .hasMessage("This student's account status for the evaluated week is unknown.");
+        verify(this.evaluationRepository, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
     void testAddPeerEvaluationNotInActiveWeeks() {
         // Given
         // No clock is needed here: an inactive week is refused before the previous-week check reads the clock
@@ -600,6 +634,27 @@ class EvaluationServiceTest {
         assertThat(report.getPeerEvaluationAverages().get(1).getAverageTotalScore()).isCloseTo(50.0, within(0.01));
         assertThat(report.getPeerEvaluationAverages().get(2).getAverageTotalScore()).isCloseTo(51.0, within(0.01));
         assertThat(report.getPeerEvaluationAverages().get(3).getAverageTotalScore()).isCloseTo(52.0, within(0.01));
+    }
+
+    @Test
+    void historicalReportIncludesEligibleAndRetainedStudentsButOmitsInactiveWithoutEvidence() {
+        given(this.sectionRepository.findById(2)).willReturn(Optional.of(
+                new Section("2023-2024", LocalDate.of(2023, 8, 14), LocalDate.of(2024, 4, 29),
+                        true, DayOfWeek.MONDAY, LocalTime.of(23, 59), DayOfWeek.TUESDAY, LocalTime.of(23, 59))));
+        given(this.studentRepository.findBySectionSectionId(2)).willReturn(List.of(this.john, this.eric, this.woody));
+        given(this.evaluationRepository.findDistinctEvaluateeIdsBySectionAndWeek(2, "2023-W31"))
+                .willReturn(Set.of(this.eric.getId()));
+        given(this.studentService.isEvaluationEligible(this.john.getId(), "2023-W31"))
+                .willReturn(EvaluationEligibility.ELIGIBLE);
+        given(this.studentService.isEvaluationEligible(this.woody.getId(), "2023-W31"))
+                .willReturn(EvaluationEligibility.INELIGIBLE);
+
+        WeeklyPeerEvaluationReport report = this.evaluationService
+                .generateWeeklyPeerEvaluationReportForSection(2, "2023-W31");
+
+        assertThat(report.getPeerEvaluationAverages())
+                .extracting(PeerEvaluationAverage::getStudentId)
+                .containsExactly(this.john.getId(), this.eric.getId());
     }
 
     @Test

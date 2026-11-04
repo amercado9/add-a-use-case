@@ -21,6 +21,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import org.springframework.security.authentication.DisabledException;
 
 @ExtendWith(MockitoExtension.class)
 class ActiveAccountFilterTest {
@@ -63,7 +64,8 @@ class ActiveAccountFilterTest {
 
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
         assertThat(chain.getRequest()).isNull();
-        verify(this.authenticationEntryPoint).commence(any(), any(), any());
+        verify(this.authenticationEntryPoint).commence(any(), any(),
+                org.mockito.ArgumentMatchers.isA(DisabledException.class));
     }
 
     private static void authenticate(String subject) {

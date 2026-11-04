@@ -201,7 +201,8 @@ class StudentServiceTest {
         assertThat(result.getLastName()).isEqualTo(update.getLastName());
         assertThat(result.getEmail()).isEqualTo(update.getEmail());
         assertThat(result.getRoles()).isNotEqualTo(update.getRoles());
-        assertThat(result.isEnabled()).isNotEqualTo(update.isEnabled());
+        assertThat(result.isEnabled()).isTrue();
+        verify(this.statusChangeRepository, never()).save(any());
     }
 
     @Test
@@ -246,7 +247,9 @@ class StudentServiceTest {
 
         assertThat(result.isEnabled()).isFalse();
         verify(this.statusChangeRepository).save(argThat(change ->
-                change.getStudent() == student && !change.isEnabled()));
+                change.getStudent() == student
+                        && !change.isEnabled()
+                        && change.getEffectiveAt().equals(LocalDateTime.of(2026, 11, 4, 12, 0))));
     }
 
     @Test
@@ -274,6 +277,8 @@ class StudentServiceTest {
 
         assertThatThrownBy(() -> this.studentService.deactivateStudent(1))
                 .isInstanceOf(StudentAlreadyDeactivatedException.class);
+        assertThat(student.isEnabled()).isFalse();
+        verify(this.studentRepository, never()).save(any());
         verify(this.statusChangeRepository, never()).save(any());
     }
 

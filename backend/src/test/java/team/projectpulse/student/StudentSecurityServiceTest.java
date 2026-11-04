@@ -49,4 +49,20 @@ class StudentSecurityServiceTest {
 
         assertThat(this.studentSecurityService.canManageLifecycle(999)).isFalse();
     }
+
+    @Test
+    void studentCannotManageLifecycle() {
+        given(this.userUtils.getUserId()).willReturn(4);
+        given(this.userUtils.hasRole("ROLE_admin")).willReturn(false);
+        given(this.userUtils.hasRole("ROLE_instructor")).willReturn(false);
+
+        assertThat(this.studentSecurityService.canManageLifecycle(4)).isFalse();
+    }
+
+    @Test
+    void missingCallerFailsClosed() {
+        given(this.userUtils.getUserId()).willReturn(null);
+
+        assertThat(this.studentSecurityService.canManageLifecycle(4)).isFalse();
+    }
 }
