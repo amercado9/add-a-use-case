@@ -273,7 +273,7 @@ classDiagram
     class StudentAccountStatusChange {
         Integer statusChangeId
         Boolean enabled
-        Instant effectiveAt
+        LocalDateTime effectiveAt
     }
     class Course {
         Integer courseId
@@ -362,7 +362,7 @@ classDiagram
     Instructor --> "1" Section : defaultSection
 ```
 
-Here `Section` is the course section entity — the enrollment unit students join and that groups them into teams — not a document section. There is no standalone weekly-activity-report entity: a student's weekly activity report is her `Activity` rows for a given `week`. A course section's `warWeeklyDueDay` / `peerEvaluationWeeklyDueDay` and the paired due times drive the weekly submission reminders (FR-NOT-weekly-reminder). `StudentAccountStatusChange` records each actual activation or deactivation and its effective time so historical evaluation eligibility can be resolved under BR-deactivated-student-evaluations; status before a student's earliest recorded change is unknown and shall not be populated with an inferred event. `ActivityCategory` and `ActivityStatus` are enumerations (shown above); `DayOfWeek`, `LocalDate`, `LocalTime`, and `Instant` are `java.time` types. `Student` and `Instructor` share the platform's user identity fields (id, email, name).
+Here `Section` is the course section entity — the enrollment unit students join and that groups them into teams — not a document section. There is no standalone weekly-activity-report entity: a student's weekly activity report is her `Activity` rows for a given `week`. A course section's `warWeeklyDueDay` / `peerEvaluationWeeklyDueDay` and the paired due times drive the weekly submission reminders (FR-NOT-weekly-reminder). `StudentAccountStatusChange` records each actual activation or deactivation and its effective time so historical evaluation eligibility can be resolved under BR-deactivated-student-evaluations; status before a student's earliest recorded change is unknown and shall not be populated with an inferred event. `ActivityCategory` and `ActivityStatus` are enumerations (shown above); `DayOfWeek`, `LocalDate`, `LocalTime`, and `LocalDateTime` are `java.time` types. `Student` and `Instructor` share the platform's user identity fields (id, email, name).
 
 ### *RAM requirements graph*
 
