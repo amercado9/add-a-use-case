@@ -255,7 +255,8 @@ class StudentServiceTest {
         assertThat(result.getLastName()).isEqualTo(update.getLastName());
         assertThat(result.getEmail()).isEqualTo(update.getEmail());
 //        assertThat(result.getRoles()).isEqualTo(update.getRoles());
-        assertThat(result.isEnabled()).isNotEqualTo(update.isEnabled());
+        assertThat(result.isEnabled()).isTrue();
+        verify(this.statusChangeRepository, never()).save(any());
     }
 
     @Test
