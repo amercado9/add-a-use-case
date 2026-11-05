@@ -42,6 +42,7 @@
       <el-table-column label="Operations" width="120">
         <template #default="{ row }">
           <el-button
+            data-cy="edit-student"
             icon="Edit"
             circle
             plain

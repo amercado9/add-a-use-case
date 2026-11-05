@@ -27,7 +27,7 @@ describe('Deactivate a student', () => {
       }
     })
     cy.visit('/students')
-    cy.get('button[icon="Edit"]').click()
+    cy.get('[data-cy="edit-student"]').click()
     cy.get('[data-cy=deactivate-student]').click()
   })
 
@@ -37,9 +37,11 @@ describe('Deactivate a student', () => {
       .and('contain', 'assignments').and('contain', 'submitted work')
       .and('contain', 'Earlier-week evaluations').and('contain', 'submission obligations')
       .and('contain', 'reactivated').and('contain', 'not permanent deletion')
-    cy.contains('button', 'Cancel').click()
+    cy.get('.el-message-box').contains('button', 'Cancel').click()
     cy.get('@deactivate.all').should('have.length', 0)
-    cy.get('.el-dialog').should('be.visible').and('contain', 'John')
+    cy.get('.el-dialog').should('be.visible')
+    cy.get('.el-dialog').contains('.el-form-item', 'First Name:')
+      .find('input').should('have.value', 'John')
     cy.contains('Student deactivated successfully').should('not.exist')
   })
 
