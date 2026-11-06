@@ -37,6 +37,10 @@ public class UserService implements UserDetailsService {
         return this.userRepository.findByEmail(email).isPresent();
     }
 
+    public boolean isAccountEnabled(String username) {
+        return this.userRepository.existsByUsernameAndEnabledTrue(username);
+    }
+
     public void resetPassword(Map<String, String> resetPasswordInfo) {
         String email = resetPasswordInfo.get("email");
         String token = resetPasswordInfo.get("token");

@@ -13,14 +13,10 @@
     <el-form-item label="Username:" prop="username">
       <el-input v-model="studentBeingEdited.username"></el-input>
     </el-form-item>
-    <el-form-item label="Status:" prop="enabled">
-      <el-switch
-        v-model="studentBeingEdited.enabled"
-        inline-prompt
-        active-text="Enabled"
-        inactive-text="Disabled"
-        style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
-      />
+    <el-form-item label="Status:">
+      <el-tag :type="studentBeingEdited.enabled ? 'success' : 'danger'">
+        {{ studentBeingEdited.enabled ? 'Enabled' : 'Disabled' }}
+      </el-tag>
     </el-form-item>
     <el-form-item label="First Name:" prop="firstName">
       <el-input v-model="studentBeingEdited.firstName"></el-input>
@@ -34,7 +30,17 @@
     <el-form-item label="Team:" prop="teamName">
       <el-input v-model="studentBeingEdited.teamName" disabled></el-input>
     </el-form-item>
-    <div style="display: flex; justify-content: end">
+    <div class="form-actions">
+      <el-button
+        v-if="studentBeingEdited.enabled"
+        type="danger"
+        plain
+        @click="confirmDeactivation"
+        data-cy="deactivate-student"
+      >
+        Deactivate
+      </el-button>
+      <span class="action-spacer"></span>
       <el-button @click="$emit('close-dialog')"> Cancel </el-button>
       <el-button type="primary" @click="updateExistingStudent()"> Confirm </el-button>
     </div>
@@ -42,10 +48,11 @@
 </template>
 
 <script setup lang="ts">
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import axios from 'axios'
 import type { Student } from '@/apis/student/types'
 import type { FormInstance } from 'element-plus'
-import { findStudentById, updateStudent } from '@/apis/student'
+import { deactivateStudent, findStudentById, updateStudent } from '@/apis/student'
 import { ref, onMounted } from 'vue'
 
 const { studentId } = defineProps(['studentId'])
@@ -74,7 +81,6 @@ const rules = {
       trigger: 'blur'
     }
   ],
-  enabled: [{ required: true, message: 'Please select the status of the user.', trigger: 'blur' }],
   firstName: [
     { required: true, message: 'Please provide the first name of the user.', trigger: 'blur' }
   ],
@@ -110,7 +116,6 @@ async function updateExistingStudent() {
   const updatedStudent: Student = {
     id: studentBeingEdited.value.id,
     username: studentBeingEdited.value.username,
-    enabled: studentBeingEdited.value.enabled,
     firstName: studentBeingEdited.value.firstName,
     lastName: studentBeingEdited.value.lastName,
     email: studentBeingEdited.value.email
@@ -122,6 +127,42 @@ async function updateExistingStudent() {
   ElMessage.success('Student updated successfully')
   emit('close-dialog')
 }
+
+async function confirmDeactivation() {
+  try {
+    await ElMessageBox.confirm(
+      'Deactivation immediately removes access, including existing credentials. Course-section and team assignments and submitted work are retained. Earlier-week evaluations may remain eligible, while current submission obligations stop. The account can be reactivated later; this is not permanent deletion.',
+      'Deactivate student?',
+      {
+        confirmButtonText: 'Confirm deactivation',
+        cancelButtonText: 'Cancel',
+        type: 'warning'
+      }
+    )
+  } catch {
+    return
+  }
+
+  try {
+    await deactivateStudent(studentBeingEdited.value.id as number)
+    await loadStudent(studentBeingEdited.value.id as number)
+    ElMessage.success('Student deactivated successfully')
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 409) {
+      await loadStudent(studentBeingEdited.value.id as number)
+      ElMessage.info('This student is already deactivated.')
+    }
+  }
+}
 </script>
 
-<style scoped lang="scss"></style>
+<style scoped lang="scss">
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.action-spacer {
+  flex: 1;
+}
+</style>

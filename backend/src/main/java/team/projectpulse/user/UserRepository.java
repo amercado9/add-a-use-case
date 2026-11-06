@@ -16,4 +16,6 @@ public interface UserRepository extends JpaRepository<PeerEvaluationUser, Intege
 
     List<PeerEvaluationUser> findByEmailIn(Collection<String> emails);
 
+    boolean existsByUsernameAndEnabledTrue(String username);
+
 }

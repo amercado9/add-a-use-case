@@ -3,20 +3,24 @@ package team.projectpulse.student;
 import team.projectpulse.section.Section;
 import team.projectpulse.section.SectionRepository;
 import team.projectpulse.system.UserUtils;
+import team.projectpulse.system.WeekKeys;
 import team.projectpulse.system.exception.ObjectNotFoundException;
+import team.projectpulse.system.exception.StudentAlreadyDeactivatedException;
 import team.projectpulse.user.userinvitation.UserInvitationService;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @Transactional
@@ -27,14 +31,18 @@ public class StudentService {
     private final UserInvitationService userInvitationService;
     private final PasswordEncoder passwordEncoder;
     private final UserUtils userUtils;
+    private final StudentAccountStatusChangeRepository statusChangeRepository;
+    private final Clock clock;
 
 
-    public StudentService(StudentRepository studentRepository, SectionRepository sectionRepository, UserInvitationService userInvitationService, PasswordEncoder passwordEncoder, UserUtils userUtils) {
+    public StudentService(StudentRepository studentRepository, SectionRepository sectionRepository, UserInvitationService userInvitationService, PasswordEncoder passwordEncoder, UserUtils userUtils, StudentAccountStatusChangeRepository statusChangeRepository, Clock clock) {
         this.studentRepository = studentRepository;
         this.sectionRepository = sectionRepository;
         this.userInvitationService = userInvitationService;
         this.passwordEncoder = passwordEncoder;
         this.userUtils = userUtils;
+        this.statusChangeRepository = statusChangeRepository;
+        this.clock = clock;
     }
 
     public Page<Student> findByCriteria(Map<String, String> searchCriteria, Pageable pageable) {
@@ -72,7 +80,15 @@ public class StudentService {
     }
 
     public Student findStudentById(Integer studentId) {
-        return this.studentRepository.findById(studentId)
+        Integer callerId = this.userUtils.getUserId();
+        if (studentId.equals(callerId) && this.userUtils.hasRole("ROLE_student")) {
+            return this.studentRepository.findById(studentId)
+                    .orElseThrow(() -> new ObjectNotFoundException("student", studentId));
+        }
+        Optional<Student> student = this.userUtils.hasRole("ROLE_admin")
+                ? this.studentRepository.findFirstByIdAndSectionCourseCourseAdminId(studentId, callerId)
+                : this.studentRepository.findFirstByIdAndSectionInstructorsId(studentId, callerId);
+        return student
                 .orElseThrow(() -> new ObjectNotFoundException("student", studentId));
     }
 
@@ -99,9 +115,23 @@ public class StudentService {
         newStudent.setPassword(this.passwordEncoder.encode(newStudent.getPassword()));
 
         Student savedStudent = this.studentRepository.save(newStudent);
+        this.statusChangeRepository.save(new StudentAccountStatusChange(savedStudent, true, LocalDateTime.now(this.clock)));
         // Delete the user invitation after the student is saved.
         this.userInvitationService.deleteUserInvitation(newStudent.getEmail());
         return savedStudent;
+    }
+
+    /**
+     * Resolves whether a student was eligible to be evaluated at the end of an ISO week.
+     * Status at the boundary is the last real transition strictly before the following Monday;
+     * legacy students with no such event remain unknown.
+     */
+    public EvaluationEligibility isEvaluationEligible(Integer studentId, String week) {
+        LocalDateTime followingMonday = WeekKeys.monday(week).plusWeeks(1).atStartOfDay();
+        return this.statusChangeRepository
+                .findFirstByStudentIdAndEffectiveAtBeforeOrderByEffectiveAtDescStatusChangeIdDesc(studentId, followingMonday)
+                .map(change -> change.isEnabled() ? EvaluationEligibility.ELIGIBLE : EvaluationEligibility.INELIGIBLE)
+                .orElse(EvaluationEligibility.UNKNOWN);
     }
 
     public Student updateStudent(Integer studentId, Student update) {
@@ -114,15 +144,25 @@ public class StudentService {
         oldStudent.setLastName(update.getLastName());
         oldStudent.setEmail(update.getEmail());
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return this.studentRepository.save(oldStudent);
+    }
 
-        // If the user is an admin, then the user can update all the fields
-        if (authentication.getAuthorities().stream().anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ROLE_instructor"))) {
-            oldStudent.setEnabled(update.isEnabled());
-//            oldStudent.setRoles(update.getRoles());
+    public Student deactivateStudent(Integer studentId) {
+        Integer callerId = this.userUtils.getUserId();
+        Student student = (this.userUtils.hasRole("ROLE_admin")
+                ? this.studentRepository.findByIdAndSectionCourseCourseAdminId(studentId, callerId)
+                : this.studentRepository.findByIdAndSectionInstructorsId(studentId, callerId))
+                .orElseThrow(() -> new AccessDeniedException("No permission."));
+
+        if (!student.isEnabled()) {
+            throw new StudentAlreadyDeactivatedException(studentId);
         }
 
-        return this.studentRepository.save(oldStudent);
+        student.setEnabled(false);
+        Student savedStudent = this.studentRepository.save(student);
+        this.statusChangeRepository.save(new StudentAccountStatusChange(
+                savedStudent, false, LocalDateTime.now(this.clock)));
+        return savedStudent;
     }
 
     public void deleteStudent(Integer studentId) {

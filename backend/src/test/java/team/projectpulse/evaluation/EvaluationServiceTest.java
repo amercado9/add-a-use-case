@@ -8,6 +8,8 @@ import team.projectpulse.section.Section;
 import team.projectpulse.section.SectionRepository;
 import team.projectpulse.student.Student;
 import team.projectpulse.student.StudentRepository;
+import team.projectpulse.student.StudentService;
+import team.projectpulse.student.EvaluationEligibility;
 import team.projectpulse.system.exception.PeerEvaluationIllegalArgumentException;
 import team.projectpulse.team.Team;
 import team.projectpulse.user.MyUserPrincipal;
@@ -24,6 +26,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import java.time.*;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -32,6 +35,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 class EvaluationServiceTest {
@@ -44,6 +48,8 @@ class EvaluationServiceTest {
     SectionRepository sectionRepository;
     @Mock
     Clock clock; // Mock the clock bean
+    @Mock
+    StudentService studentService;
 
     @InjectMocks
     EvaluationService evaluationService;
@@ -65,6 +71,10 @@ class EvaluationServiceTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(this.studentService.isEvaluationEligible(anyInt(), anyString()))
+                .thenReturn(EvaluationEligibility.ELIGIBLE);
+        lenient().when(this.evaluationRepository.findDistinctEvaluateeIdsBySectionAndWeek(anyInt(), anyString()))
+                .thenReturn(Set.of());
         // Create several peer evaluation criteria
         Criterion criterion1 = new Criterion("Quality of work", "How do you rate the quality of this teammate's work? (1-10)", 10.00);
         criterion1.setCriterionId(1);
@@ -313,6 +323,40 @@ class EvaluationServiceTest {
         // Then
         assertThat(savedPeerEvaluation).isEqualTo(newPeerEvaluation);
         verify(this.evaluationRepository, times(1)).save(newPeerEvaluation);
+    }
+
+    @Test
+    void inactiveEvaluateeAtWeekEndIsRejected() {
+        LocalDate fixedDate = LocalDate.of(2023, 8, 13);
+        Clock fixedClock = Clock.fixed(fixedDate.atStartOfDay(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault());
+        given(this.clock.instant()).willReturn(fixedClock.instant());
+        given(this.clock.getZone()).willReturn(fixedClock.getZone());
+        given(this.studentService.isEvaluationEligible(this.woody.getId(), "2023-W31"))
+                .willReturn(EvaluationEligibility.INELIGIBLE);
+        PeerEvaluation evaluation = new PeerEvaluation("2023-W31", this.amanda, this.woody,
+                List.of(), "public comment", "private comment");
+
+        assertThatThrownBy(() -> this.evaluationService.addPeerEvaluation(evaluation))
+                .isInstanceOf(PeerEvaluationIllegalArgumentException.class)
+                .hasMessage("This student was inactive at the end of the evaluated week.");
+        verify(this.evaluationRepository, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    void unknownLegacyEvaluateeStatusIsRejected() {
+        LocalDate fixedDate = LocalDate.of(2023, 8, 13);
+        Clock fixedClock = Clock.fixed(fixedDate.atStartOfDay(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault());
+        given(this.clock.instant()).willReturn(fixedClock.instant());
+        given(this.clock.getZone()).willReturn(fixedClock.getZone());
+        given(this.studentService.isEvaluationEligible(this.woody.getId(), "2023-W31"))
+                .willReturn(EvaluationEligibility.UNKNOWN);
+        PeerEvaluation evaluation = new PeerEvaluation("2023-W31", this.amanda, this.woody,
+                List.of(), "public comment", "private comment");
+
+        assertThatThrownBy(() -> this.evaluationService.addPeerEvaluation(evaluation))
+                .isInstanceOf(PeerEvaluationIllegalArgumentException.class)
+                .hasMessage("This student's account status for the evaluated week is unknown.");
+        verify(this.evaluationRepository, org.mockito.Mockito.never()).save(any());
     }
 
     @Test
@@ -590,6 +634,28 @@ class EvaluationServiceTest {
         assertThat(report.getPeerEvaluationAverages().get(1).getAverageTotalScore()).isCloseTo(50.0, within(0.01));
         assertThat(report.getPeerEvaluationAverages().get(2).getAverageTotalScore()).isCloseTo(51.0, within(0.01));
         assertThat(report.getPeerEvaluationAverages().get(3).getAverageTotalScore()).isCloseTo(52.0, within(0.01));
+    }
+
+    @Test
+    void historicalReportIncludesEligibleAndRetainedStudentsButOmitsInactiveWithoutEvidence() {
+        this.eric.getTeam().removeStudent(this.eric);
+        given(this.sectionRepository.findById(2)).willReturn(Optional.of(
+                new Section("2023-2024", LocalDate.of(2023, 8, 14), LocalDate.of(2024, 4, 29),
+                        true, DayOfWeek.MONDAY, LocalTime.of(23, 59), DayOfWeek.TUESDAY, LocalTime.of(23, 59))));
+        given(this.studentRepository.findBySectionSectionId(2)).willReturn(List.of(this.john, this.eric, this.woody));
+        given(this.evaluationRepository.findDistinctEvaluateeIdsBySectionAndWeek(2, "2023-W31"))
+                .willReturn(Set.of(this.eric.getId()));
+        given(this.studentService.isEvaluationEligible(this.john.getId(), "2023-W31"))
+                .willReturn(EvaluationEligibility.ELIGIBLE);
+        given(this.studentService.isEvaluationEligible(this.woody.getId(), "2023-W31"))
+                .willReturn(EvaluationEligibility.INELIGIBLE);
+
+        WeeklyPeerEvaluationReport report = this.evaluationService
+                .generateWeeklyPeerEvaluationReportForSection(2, "2023-W31");
+
+        assertThat(report.getPeerEvaluationAverages())
+                .extracting(PeerEvaluationAverage::getStudentId)
+                .containsExactly(this.john.getId(), this.eric.getId());
     }
 
     @Test

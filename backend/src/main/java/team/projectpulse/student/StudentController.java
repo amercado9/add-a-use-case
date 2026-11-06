@@ -1,10 +1,10 @@
 package team.projectpulse.student;
 
-import team.projectpulse.student.converter.StudentDtoToStudentConverter;
 import team.projectpulse.student.converter.StudentRegistrationToStudentConverter;
 import team.projectpulse.student.converter.StudentToStudentDtoConverter;
 import team.projectpulse.student.dto.StudentDto;
 import team.projectpulse.student.dto.StudentRegistrationRequest;
+import team.projectpulse.student.dto.StudentProfileUpdateDto;
 import team.projectpulse.system.Result;
 import team.projectpulse.system.StatusCode;
 import jakarta.validation.Valid;
@@ -23,14 +23,12 @@ public class StudentController {
     private final StudentService studentService;
     private final StudentRegistrationToStudentConverter studentRegistrationToStudentConverter;
     private final StudentToStudentDtoConverter studentToStudentDtoConverter;
-    private final StudentDtoToStudentConverter studentDtoToStudentConverter;
 
 
-    public StudentController(StudentService studentService, StudentRegistrationToStudentConverter studentRegistrationToStudentConverter, StudentToStudentDtoConverter studentToStudentDtoConverter, StudentDtoToStudentConverter studentDtoToStudentConverter) {
+    public StudentController(StudentService studentService, StudentRegistrationToStudentConverter studentRegistrationToStudentConverter, StudentToStudentDtoConverter studentToStudentDtoConverter) {
         this.studentService = studentService;
         this.studentRegistrationToStudentConverter = studentRegistrationToStudentConverter;
         this.studentToStudentDtoConverter = studentToStudentDtoConverter;
-        this.studentDtoToStudentConverter = studentDtoToStudentConverter;
     }
 
     @PostMapping("/search")
@@ -63,11 +61,22 @@ public class StudentController {
     }
 
     @PutMapping("/{studentId}")
-    public Result updateStudent(@PathVariable Integer studentId, @Valid @RequestBody StudentDto studentDto) {
-        Student update = this.studentDtoToStudentConverter.convert(studentDto);
+    public Result updateStudent(@PathVariable Integer studentId, @Valid @RequestBody StudentProfileUpdateDto studentDto) {
+        Student update = new Student();
+        update.setUsername(studentDto.username());
+        update.setFirstName(studentDto.firstName());
+        update.setLastName(studentDto.lastName());
+        update.setEmail(studentDto.email());
         Student updatedStudent = this.studentService.updateStudent(studentId, update);
         StudentDto updatedStudentDto = this.studentToStudentDtoConverter.convert(updatedStudent);
         return new Result(true, StatusCode.SUCCESS, "Update student successfully", updatedStudentDto);
+    }
+
+    @PatchMapping("/{studentId}/deactivation")
+    public Result deactivateStudent(@PathVariable Integer studentId) {
+        Student deactivatedStudent = this.studentService.deactivateStudent(studentId);
+        StudentDto studentDto = this.studentToStudentDtoConverter.convert(deactivatedStudent);
+        return new Result(true, StatusCode.SUCCESS, "Deactivate student successfully", studentDto);
     }
 
     @DeleteMapping("/{studentId}")
